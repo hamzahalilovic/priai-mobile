@@ -1,5 +1,12 @@
-import React, {useState, useEffect, useContext} from 'react';
-import {View, Text, TouchableOpacity, Alert} from 'react-native';
+import React, {useState, useEffect, useContext, useRef} from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Alert,
+  TextInput,
+  Button,
+} from 'react-native';
 import axios from 'axios';
 import Share from 'react-native-share';
 
@@ -28,6 +35,9 @@ const SubscriptionsScreen = () => {
     useContext(AppContext);
 
   const {toastConfig, showToast, hideToast} = useToast();
+
+  const [email, setEmail] = useState('');
+  const emailRef = useRef(null);
 
   console.log('userId', userId);
 
@@ -64,7 +74,12 @@ const SubscriptionsScreen = () => {
             Alert.alert(
               'Success',
               'Answers received!',
-              [{text: 'OK', onPress: () => console.log('OK pressed')}],
+              [
+                {
+                  text: 'OK',
+                  onPress: () => console.log('OK pressed'),
+                },
+              ],
               {cancelable: false},
             );
           } catch (error) {
@@ -73,7 +88,12 @@ const SubscriptionsScreen = () => {
             Alert.alert(
               'Error',
               'Sending unsuccessful!',
-              [{text: 'OK', onPress: () => console.log('OK pressed')}],
+              [
+                {
+                  text: 'OK',
+                  onPress: () => console.log('OK pressed'),
+                },
+              ],
               {cancelable: false},
             );
           }
@@ -90,7 +110,12 @@ const SubscriptionsScreen = () => {
             Alert.alert(
               'Success',
               'Answers received!',
-              [{text: 'OK', onPress: () => console.log('OK pressed')}],
+              [
+                {
+                  text: 'OK',
+                  onPress: () => console.log('OK pressed'),
+                },
+              ],
               {cancelable: false},
             );
           } catch (error) {
@@ -99,7 +124,12 @@ const SubscriptionsScreen = () => {
             Alert.alert(
               'Error',
               'Sending unsuccessful!',
-              [{text: 'OK', onPress: () => console.log('OK pressed')}],
+              [
+                {
+                  text: 'OK',
+                  onPress: () => console.log('OK pressed'),
+                },
+              ],
               {cancelable: false},
             );
           }
@@ -110,10 +140,161 @@ const SubscriptionsScreen = () => {
       Alert.alert(
         'Error',
         'Sending unsuccessful!',
-        [{text: 'OK', onPress: () => console.log('OK pressed')}],
+        [
+          {
+            text: 'OK',
+            onPress: () => console.log('OK pressed'),
+          },
+        ],
         {cancelable: false},
       );
     }
+  };
+
+  const onShareEmail = async () => {
+    if (!validateEmail(email)) {
+      Alert.alert(
+        'Invalid Email',
+        'Please enter a valid email address.',
+        [
+          {
+            text: 'OK',
+            onPress: () => console.log('OK pressed'),
+          },
+        ],
+        {cancelable: false},
+      );
+      return;
+    }
+
+    try {
+      await sendEmailInvitation(email);
+
+      const newShareCount = shareCount + 100;
+
+      // get current share count
+      const currentShare = await axios.post(config.GRAPHCMS_API_KEY, {
+        query: GET_SHARE_COUNT,
+        variables: {userId: userId},
+      });
+
+      if (currentShare.data.data.share) {
+        // if a share with that userId exists, update it
+        try {
+          await axios.post(config.GRAPHCMS_API_KEY, {
+            query: UPDATE_AND_PUBLISH_SHARE_COUNT,
+            variables: {userId: userId, shareCount: newShareCount},
+          });
+
+          setShareCount(newShareCount);
+
+          Alert.alert(
+            'Success',
+            'Invitation sent successfully!',
+            [
+              {
+                text: 'OK',
+                onPress: () => console.log('OK pressed'),
+              },
+            ],
+            {cancelable: false},
+          );
+        } catch (error) {
+          console.log('Error => 1', error);
+
+          Alert.alert(
+            'Error',
+            'Sending unsuccessful!',
+            [
+              {
+                text: 'OK',
+                onPress: () => console.log('OK pressed'),
+              },
+            ],
+            {cancelable: false},
+          );
+        }
+      } else {
+        // if a share with that userId doesn't exist, create a new one
+        try {
+          await axios.post(config.GRAPHCMS_API_KEY, {
+            query: CREATE_AND_PUBLISH_NEW_SHARE,
+            variables: {userId: userId, shareCount: newShareCount},
+          });
+
+          setShareCount(newShareCount);
+
+          Alert.alert(
+            'Success',
+            'Invitation sent successfully!',
+            [
+              {
+                text: 'OK',
+                onPress: () => console.log('OK pressed'),
+              },
+            ],
+            {cancelable: false},
+          );
+        } catch (error) {
+          console.log('Error => 2', error.response);
+
+          Alert.alert(
+            'Error',
+            'Sending unsuccessful!',
+            [
+              {
+                text: 'OK',
+                onPress: () => console.log('OK pressed'),
+              },
+            ],
+            {cancelable: false},
+          );
+        }
+      }
+    } catch (error) {
+      console.log('Error => 3', error);
+      Alert.alert(
+        'Error',
+        'Sending unsuccessful!',
+        [
+          {
+            text: 'OK',
+            onPress: () => console.log('OK pressed'),
+          },
+        ],
+        {cancelable: false},
+      );
+    }
+  };
+
+  const sendEmailInvitation = async email => {
+    // Implement your email invitation logic here
+    // This is just a placeholder function
+    // Replace it with your own implementation
+
+    // Example code to send an email invitation
+    const response = await axios.post('https://your-email-invitation-api', {
+      email: email,
+      // Other necessary data for the email invitation
+    });
+
+    // Handle the response and check if the invitation was sent successfully
+    if (response.status === 200) {
+      // Invitation sent successfully
+    } else {
+      // Failed to send the invitation
+      throw new Error('Failed to send email invitation');
+    }
+  };
+
+  const validateEmail = email => {
+    // Implement your email validation logic here
+    // This is just a placeholder function
+    // Replace it with your own implementation
+
+    // Simple email validation using regular expression
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   };
 
   return (
@@ -246,9 +427,24 @@ const SubscriptionsScreen = () => {
               lineHeight: 20,
             }}>
             {shareMessage == ''
-              ? 'Invite friends will be available soon!'
+              ? 'Inviting friends will be available soon!'
               : null}
           </Text>
+        </View>
+        <View>
+          <Text>Invite by email</Text>
+
+          <TextInput
+            ref={emailRef}
+            placeholder="Enter email"
+            onChangeText={text => setEmail(text)}
+            value={email}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+
+          <Button title="Invite" onPress={onShareEmail} />
         </View>
       </ContentWrapper>
     </>

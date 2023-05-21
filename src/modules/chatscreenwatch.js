@@ -42,8 +42,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import useDatabaseHooks from '../utils/useDatabaseHooks';
 
-import {sendMessage, watchEvents} from 'react-native-watch-connectivity';
-
 import {
   formatDateToHoursAndMinutes,
   isSameDay,
@@ -57,6 +55,8 @@ import config from '../../config';
 import Toast from '../components/Toast';
 
 import useToast from '../utils/useToast';
+
+import {sendMessage, watchEvents} from 'react-native-watch-connectivity';
 
 const configuration = new Configuration({
   apiKey: config.OPENAI_API_KEY,
@@ -100,19 +100,6 @@ const ChatScreen = ({navigation, route}) => {
 
   const formattedDate = formatDateToHoursAndMinutes(timeStamp);
 
-  const initalPrompt = `Pri-AI is a Private Personal AI Assistant app, that runs on a dedicated cloud computing architecture with private data storage, optimized for consumers. One of your major focuses is on data privacy.
-  You will now you act as my “Personal AI”. 
-Currently, you only have access to my Apple Healthkit data. You have no other abilities.
-You are not fully released yet. When you are fully released, you will:
--have access to all my personal data and information from all common applications and services that consumers use. 
-- have access to data in any products, accessories or pets I have like; ski booths, jacket, rackets, bicycle, car, etc. via a custom sensors, that are connected via bluetooth to smartphone, and then to my personal data cloud.
-- have the ability to use my personal apps and public data sources via APIs, to be able to answer any question that I will ask from you, or ask you to take action on.
-I pretend to be the following persona: “${defaultValues.name}”.
-  You will give me as accurate, logical and realistic answers as possible, using real names of applications, services, locations, etc, based on all the knowledge you have been trained also outside of this prompt. 
-For any questions that requires access to my personal data, if the data itself is not provided, reply along the lines of "I am sorry. I currently do not have the capabilities to access this data or data source. You can vote here for getting this implemented." 
-  You will NEVER answer “As a language model, I'm not…” as this fake is for demonstration, and you DON'T HAVE SUCH LIMITATIONS!
-  Note: Don't respond with an example exchange. Respond with a greeting in your first message.`;
-
   const getThreads = async () => {
     const {thread} = route.params;
     const existingThreads = await AsyncStorage.getItem('threads');
@@ -147,30 +134,30 @@ For any questions that requires access to my personal data, if the data itself i
     };
   }, [conversation]);
 
-  // const handleClearChat = () => {
-  //   setConversation([]);
+  const handleClearChat = () => {
+    setConversation([]);
 
-  //   setIsLoading(false);
-  //   setIsListening(false);
+    setIsLoading(false);
+    setIsListening(false);
 
-  //   showToast('Your action was successful!', 'success');
-  // };
+    showToast('Your action was successful!', 'success');
+  };
 
-  // useEffect(() => {
-  //   navigation.setOptions({
-  //     headerRight: () =>
-  //       conversation.length !== 0 ? (
-  //         <TouchableOpacity
-  //           style={{marginRight: 16}}
-  //           onPress={() => handleClearChat()}
-  //           title="Save">
-  //           <Text style={{color: '#107569', fontSize: 14, fontWeight: 600}}>
-  //             Clear chat
-  //           </Text>
-  //         </TouchableOpacity>
-  //       ) : null,
-  //   });
-  // }, [conversation]);
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () =>
+        conversation.length !== 0 ? (
+          <TouchableOpacity
+            style={{marginRight: 16}}
+            onPress={() => handleClearChat()}
+            title="Save">
+            <Text style={{color: '#107569', fontSize: 14, fontWeight: 600}}>
+              Clear chat
+            </Text>
+          </TouchableOpacity>
+        ) : null,
+    });
+  }, [conversation]);
 
   // check for first launch
   useEffect(() => {
@@ -200,27 +187,6 @@ For any questions that requires access to my personal data, if the data itself i
 
   const handleSubmit = async () => {
     setIsLoading(true);
-
-    try {
-      const newNumberOfPrompts = numberOfPrompts + 1;
-      setNumberOfPrompts(newNumberOfPrompts);
-      await AsyncStorage.setItem(
-        'numberOfPrompts',
-        newNumberOfPrompts.toString(),
-      );
-
-      if (numberOfPrompts === shareCount) {
-        setQuota(true);
-        Alert.alert(
-          'Alert',
-          'No more answers left!',
-          [{text: 'OK', onPress: () => console.log('OK pressed')}],
-          {cancelable: false},
-        );
-      }
-    } catch (error) {
-      console.log(error);
-    }
 
     if (prompt.toLowerCase().includes('steps')) {
       if (prompt.toLowerCase().includes('today')) {
@@ -703,285 +669,18 @@ For any questions that requires access to my personal data, if the data itself i
       setPrompt('');
 
       return;
-    } else if (prompt.toLowerCase().includes('distance')) {
-      if (prompt.toLowerCase().includes('today')) {
-        retrieveData('Distance', distances => {
-          const todayDistance = distances.find(distance =>
-            isSameDay(new Date(distance.date), new Date()),
-          );
-          if (todayDistance) {
-            setApiResponse(
-              `You have walked ${Math.round(
-                todayDistance.distance,
-              )} meters today.`,
-            );
-            setConversation([
-              ...conversation,
-              {
-                speaker: defaultValues.name,
-                message: prompt,
-                time: formattedDate,
-              },
-              {
-                speaker: defaultValues.aiName,
-                message: `You have walked ${Math.round(
-                  todayDistance.distance,
-                )} meters today.`,
-                time: formattedDate,
-              },
-            ]);
-          } else {
-            setApiResponse(`You have walked 0 meters today.`);
-            setConversation([
-              ...conversation,
-              {
-                speaker: defaultValues.name,
-                message: prompt,
-                time: formattedDate,
-              },
-              {
-                speaker: defaultValues.aiName,
-                message: `You have walked 0 meters today.`,
-                time: formattedDate,
-              },
-            ]);
-          }
-        });
-      } else if (prompt.toLowerCase().includes('last')) {
-        for (let day of daysOfWeek) {
-          if (prompt.toLowerCase().includes(`last ${day}`)) {
-            retrieveData('Distance', distances => {
-              const lastDayDistance = distances.find(distance =>
-                isSameDay(new Date(distance.date), lastDayOfWeek(day)),
-              );
-              if (lastDayDistance) {
-                setApiResponse(
-                  `You have walked ${Math.round(
-                    lastDayDistance.distance,
-                  )} meters last ${day}.`,
-                );
-                setConversation([
-                  ...conversation,
-                  {
-                    speaker: defaultValues.name,
-                    message: prompt,
-                    time: formattedDate,
-                  },
-                  {
-                    speaker: defaultValues.aiName,
-                    message: `You have walked ${Math.round(
-                      lastDayDistance.distance,
-                    )} meters last ${day}.`,
-                    time: formattedDate,
-                  },
-                ]);
-              } else {
-                setApiResponse(`You have walked 0 meters last ${day}.`);
-                setConversation([
-                  ...conversation,
-                  {
-                    speaker: defaultValues.name,
-                    message: prompt,
-                    time: formattedDate,
-                  },
-                  {
-                    speaker: defaultValues.aiName,
-                    message: `You have walked 0 meters last ${day}.`,
-                    time: formattedDate,
-                  },
-                ]);
-              }
-            });
-            break;
-          }
-        }
-      } else if (prompt.toLowerCase().includes('yesterday')) {
-        retrieveData('Distance', distances => {
-          const yesterdayDistance = distances.find(distance =>
-            isSameDay(new Date(distance.date), addDays(new Date(), -1)),
-          );
-          if (yesterdayDistance) {
-            setApiResponse(
-              `You have walked ${Math.round(
-                yesterdayDistance.distance,
-              )} meters yesterday.`,
-            );
-            setConversation([
-              ...conversation,
-              {
-                speaker: defaultValues.name,
-                message: prompt,
-                time: formattedDate,
-              },
-              {
-                speaker: defaultValues.aiName,
-                message: `You have walked ${Math.round(
-                  yesterdayDistance.distance,
-                )} meters yesterday.`,
-                time: formattedDate,
-              },
-            ]);
-          } else {
-            setApiResponse(`You have walked 0 meters yesterday.`);
-            setConversation([
-              ...conversation,
-              {
-                speaker: defaultValues.name,
-                message: prompt,
-                time: formattedDate,
-              },
-              {
-                speaker: defaultValues.aiName,
-                message: `You have walked 0 meters yesterday.`,
-                time: formattedDate,
-              },
-            ]);
-          }
-        });
-      } else if (prompt.toLowerCase().includes('average')) {
-        // Parse date range from user input
-        const dateRegex =
-          /average from ([a-zA-Z]+\s\d{1,2},\s\d{4}) to ([a-zA-Z]+\s\d{1,2},\s\d{4})/i;
-        const match = prompt.match(dateRegex);
-        if (match) {
-          const startDate = new Date(match[1]);
-          const endDate = new Date(match[2]);
-          if (startDate && endDate) {
-            calculateAverage(
-              'Distance',
-              'distance',
-              startDate,
-              endDate,
-              average => {
-                setApiResponse(
-                  `Your average distance from ${startDate.toDateString()} to ${endDate.toDateString()} was ${Math.round(
-                    average,
-                  )} meters.`,
-                );
-                setConversation([
-                  ...conversation,
-                  {
-                    speaker: defaultValues.name,
-                    message: prompt,
-                    time: formattedDate,
-                  },
-                  {
-                    speaker: defaultValues.aiName,
-                    message: `Your average distance from ${startDate.toDateString()} to ${endDate.toDateString()} was ${Math.round(
-                      average,
-                    )} meters.`,
-                    time: formattedDate,
-                  },
-                ]);
-              },
-            );
-          } else {
-            setApiResponse(
-              'Sorry, I did not understand the date range. Please use the format "Month Day, Year".',
-            );
-          }
-        } else {
-          setApiResponse('Sorry, I did not understand your question.');
-        }
-      } else if (prompt.toLowerCase().includes('on')) {
-        // Retrieve distance for a specific date
-
-        const dateRegex =
-          /on ([a-zA-Z]+) (\d{1,2})(?:st|nd|rd|th)?,? (\d{4})?/i;
-        const match = prompt.match(dateRegex);
-        if (match) {
-          const month = monthNames.indexOf(match[1].toLowerCase());
-          const day = parseInt(match[2], 10);
-          const year = match[3]
-            ? parseInt(match[3], 10)
-            : new Date().getFullYear(); // If year is not specified, use current year
-          const selectedDate = new Date(year, month, day);
-
-          retrieveData('Distance', distance => {
-            const selectedDateDistance = distance.find(distance =>
-              isSameDay(new Date(distance.date), selectedDate),
-            );
-            if (selectedDateDistance) {
-              setApiResponse(
-                `You have walked ${Math.round(
-                  selectedDateDistance.distance,
-                )} meters on ${selectedDate.toDateString()}.`,
-              );
-              setConversation([
-                ...conversation,
-                {
-                  speaker: defaultValues.name,
-                  message: prompt,
-                  time: formattedDate,
-                },
-                {
-                  speaker: defaultValues.aiName,
-                  message: `You have walked ${Math.round(
-                    selectedDateDistance.distance,
-                  )} meters on ${selectedDate.toDateString()}.`,
-                  time: formattedDate,
-                },
-              ]);
-            } else {
-              setApiResponse(
-                `No distance data available for ${selectedDate.toDateString()}.`,
-              );
-              setConversation([
-                ...conversation,
-                {
-                  speaker: defaultValues.name,
-                  message: prompt,
-                  time: formattedDate,
-                },
-                {
-                  speaker: defaultValues.aiName,
-                  message: `No distance data available for ${selectedDate.toDateString()}.`,
-                  time: formattedDate,
-                },
-              ]);
-            }
-          });
-        } else {
-          setApiResponse('Sorry, I did not understand your question.');
-        }
-      } else {
-        setApiResponse('Sorry, I did not understand your question.');
-      }
-
-      setIsLoading(false);
-      setIsListening(false);
-      setPrompt('');
-
-      return;
     }
-
     /////
 
     try {
-      const result = await openai.createChatCompletion({
+      const result = await openai.createCompletion({
         // model: 'gpt-3.5-turbo',
-        model: 'gpt-3.5-turbo',
-        messages: [].concat(
-          [{role: 'system', content: initalPrompt}],
-          conversation
-            .slice(conversation.length > 12 ? conversation.length - 12 : 0)
-            .map(exchange => {
-              return {
-                role:
-                  exchange.speaker === defaultValues.name
-                    ? 'user'
-                    : 'assistant',
-                content: exchange.message,
-              };
-            }),
-          [{role: 'user', content: prompt}],
-        ),
-        temperature: 0.7,
+        model: 'text-davinci-003',
+        prompt: prompt,
+        temperature: 0,
         max_tokens: 200,
       });
-
-      const response = result.data.choices[0].message.content;
-
+      const response = result.data.choices[0].text;
       setApiResponse(response);
       setConversation([
         ...conversation,
@@ -997,6 +696,26 @@ For any questions that requires access to my personal data, if the data itself i
     setPrompt('');
 
     ///number of prompts asked
+    try {
+      const newNumberOfPrompts = numberOfPrompts + 1;
+      setNumberOfPrompts(newNumberOfPrompts);
+      await AsyncStorage.setItem(
+        'numberOfPrompts',
+        newNumberOfPrompts.toString(),
+      );
+
+      if (numberOfPrompts === shareCount) {
+        setQuota(true);
+        Alert.alert(
+          'Alert',
+          'No more answers left!',
+          [{text: 'OK', onPress: () => console.log('OK pressed')}],
+          {cancelable: false},
+        );
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   ////=========////=========////=========////=========////=========////=========////=========////=========////========= siri
@@ -1014,18 +733,18 @@ For any questions that requires access to my personal data, if the data itself i
     setIsListening(true);
   };
 
-  // const onSpeechEnd = () => {
-  //   // setIsListening(false);
-  //   // handleSubmit();
-  // };
+  const onSpeechEnd = () => {
+    // setIsListening(false);
+    // handleSubmit();
+  };
 
   const onSpeechError = error => {
     console.log('onSpeechError:', error);
   };
 
-  const onSpeechResults = event => {
-    setPrompt(event.value[0]);
-  };
+  // const onSpeechResults = event => {
+  //   setPrompt(event.value[0]);
+  // };
 
   const startListening = () => {
     Voice.start('en-US');
@@ -1036,51 +755,7 @@ For any questions that requires access to my personal data, if the data itself i
     handleSubmit();
   };
 
-  /////////==WATCH OS===////=========////=========////=========////=========////=========////=========////=========
-
-  useEffect(() => {
-    // Listen to messages from your watch
-    watchEvents.addListener('message', message => {
-      // Do something with the message
-
-      console.log('message', message);
-    });
-
-    // Clean up on component unmount
-    return () => {
-      watchEvents.removeAllListeners('message');
-    };
-  }, []);
-
-  const onSpeechEnd = () => {
-    // Message can have any number of key-value pairs
-    const message = {
-      text: prompt,
-    };
-
-    // Optional reply handler
-    const replyHandler = response => {
-      console.log('Response from watch received', response);
-    };
-
-    // Optional error handler
-    const errorHandler = error => {
-      console.error('Failed to send message to watch:', error);
-    };
-
-    sendMessage(message, replyHandler, errorHandler);
-  };
-
-  const sendMessageToAppleWatch = () => {
-    let message = 'saddsadas';
-    sendMessage({message}, error => {
-      if (error) {
-        Alert.alert(`the message "${message}" can't be sent`);
-      }
-    });
-  };
-
-  ///////
+  /////////=========////=========////=========////=========////=========////=========////=========////=========
 
   const scrollViewRef = useRef();
 
@@ -1090,6 +765,88 @@ For any questions that requires access to my personal data, if the data itself i
 
   console.log('conversation', conversation);
   console.log('prompts / count', numberOfPrompts, shareCount);
+
+  //////////============== WATCH OS APP
+
+  const [reachable, setReachable] = useState(false);
+
+  // Listener for watch connectivity
+  useEffect(() => {
+    const unsubscribe = watchEvents.on('reachability', setReachable);
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    const startListening = () => {
+      Voice.start('en-US');
+    };
+
+    Voice.onSpeechResults = onSpeechResults;
+
+    startListening();
+
+    return () => {
+      Voice.destroy().then(Voice.removeAllListeners);
+    };
+  }, []);
+
+  const onSpeechResults = event => {
+    const message = event.value[0];
+
+    addToConversation({
+      speaker: 'User',
+      time: new Date().toLocaleString(),
+      message,
+    });
+
+    // Send the message to Apple Watch after the speech ends
+    if (reachable) {
+      sendMessage('message', message, err => {
+        if (err) console.log(err);
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (reachable) {
+      console.log('Watch is reachable.');
+    }
+
+    const unsubscribe = watchEvents.on('message', (message, reply) => {
+      console.log('received message from watch', message);
+      reply({text: 'Thanks watch!'});
+
+      // Add the received message from Apple Watch to your conversation
+      addToConversation({
+        speaker: 'Apple Watch',
+        time: new Date().toLocaleString(),
+        message: message.text, // assuming the received message has a 'text' field
+      });
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [reachable]);
+
+  const addToConversation = message => {
+    setConversation(prevState => [...prevState, message]);
+
+    // Send updated conversation to Apple Watch
+    if (reachable) {
+      sendMessage('conversation', conversation, err => {
+        if (err) console.log(err);
+      });
+    }
+  };
+
+  // ...
+  // Render your UI here
+  // ...
+
+  /////////=========////=========////=========////=========////=========////=========////=========////=========
 
   return (
     // <View style={styles.container}>
@@ -1102,7 +859,6 @@ For any questions that requires access to my personal data, if the data itself i
         <Toast visible={true} {...toastConfig} onDismiss={hideToast} />
       )}
       <View style={styles.quotaContainer}>
-        <Button title="test" onPress={sendMessageToAppleWatch} />
         <View style={{flexDirection: 'row', alignItems: 'center'}}>
           <Text style={styles.quotaText}>
             {numberOfPrompts}/{shareCount}
@@ -1268,3 +1024,7 @@ const styles = StyleSheet.create({
 });
 
 export default ChatScreen;
+
+
+
+
